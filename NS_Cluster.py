@@ -60,24 +60,24 @@ def simulate_storm_frequencies(sim, years, future_signal, result_df, params, KNN
     else:
         _, signal_samples, _ = fit_logspline_density(result_df['Signal'], n_samples, model=signal_params, plot=False) 
 
-    if freq_dist == 'Poisson':
-        f_lambda = frequency_params['lambda']
-    else: 
+    if freq_dist != 'Poisson':
         _, frequency_samples, _ = fit_logspline_density(result_df['Frequency'], n_samples, model=frequency_params, plot=False) 
     
     for index, row in parent.iterrows():
         curr_signal = parent.loc[index, 'signal']
-        freq_scale = np.maximum(0, future_signal.loc[index, 'Scale_Freq'])
-        sig_scale = np.maximum(0, future_signal.loc[index, 'Scale_Sig'])
         
         if freq_dist == 'Poisson':
+            freq_scale = np.maximum(0, future_signal.loc[index, 'Scale_Freq'])
             frequency_samples = np.random.poisson(freq_scale, n_samples)
         
         if signal_dist == 'GPD':
+            sig_scale = np.maximum(0, future_signal.loc[index, 'Scale_Sig'])
             signal_samples = genpareto.rvs(scale=sig_scale, c=s_gpd_c, loc=s_gpd_loc, size=n_samples)
         if signal_dist == 'Expon':
+            sig_scale = np.maximum(0, future_signal.loc[index, 'Scale_Sig'])
             signal_samples = np.random.exponential(scale=sig_scale, size=n_samples)
         if signal_dist == 'Gamma':
+            sig_scale = np.maximum(0, future_signal.loc[index, 'Scale_Sig'])
             signal_samples = gamma.rvs(scale=sig_scale, a=s_gamma_alpha, loc=s_gamma_loc, size=n_samples)
         
         freq_sample = {
@@ -96,6 +96,7 @@ def simulate_storm_frequencies(sim, years, future_signal, result_df, params, KNN
         parent.loc[index, 'unique_storm_id'] = f"{sim}_{row['year']}_0"
 
     return parent
+
 
 
 def simulate_storm_statistics(sim, parent, result_df, future_signal, params, KNN_sampling = True, plot_pair=False, plot_RV=False):
@@ -164,29 +165,35 @@ def simulate_storm_statistics(sim, parent, result_df, future_signal, params, KNN
     for index, row in filtered_parent.iterrows():
         curr_signal = parent.loc[index, 'signal']
         year = parent.loc[index, 'year']
-        int_scale = np.maximum(0, future_signal['Scale_Int'][future_signal['year'] == year])
-        dur_scale = np.maximum(0, future_signal['Scale_Dur'][future_signal['year'] == year])
-        sig_scale = np.maximum(0, future_signal['Scale_Sig'][future_signal['year'] == year])
         
         if dur_dist == 'GPD':
+            dur_scale = np.maximum(0, future_signal['Scale_Dur'][future_signal['year'] == year])
             duration_samples = genpareto.rvs(scale=dur_scale, c=dur_gpd_c, loc=dur_gpd_loc, size=n_samples)
         elif dur_dist == 'Gamma':
+            dur_scale = np.maximum(0, future_signal['Scale_Dur'][future_signal['year'] == year])
             duration_samples = gamma.rvs(scale=dur_scale, a=dur_gamma_alpha, loc=dur_gamma_loc, size=n_samples)
         elif dur_dist == 'Expon':
+            dur_scale = np.maximum(0, future_signal['Scale_Dur'][future_signal['year'] == year])
             duration_samples = np.random.exponential(scale=dur_scale, size=n_samples)
         
         if intensity_dist == 'GPD':
+            int_scale = np.maximum(0, future_signal['Scale_Int'][future_signal['year'] == year])
             intensity_samples = genpareto.rvs(scale=int_scale, c=gpd_c, loc=gpd_loc, size=n_samples)
         elif intensity_dist == 'Expon':
+            int_scale = np.maximum(0, future_signal['Scale_Int'][future_signal['year'] == year])
             intensity_samples = np.random.exponential(scale=int_scale, size=n_samples)
         elif intensity_dist == 'Gamma':
+            int_scale = np.maximum(0, future_signal['Scale_Int'][future_signal['year'] == year])
             intensity_samples = gamma.rvs(scale=int_scale, a=gamma_alpha, loc=gamma_loc, size=n_samples)
 
         if signal_dist == 'GPD':
+            sig_scale = np.maximum(0, future_signal['Scale_Sig'][future_signal['year'] == year])
             signal_samples = genpareto.rvs(scale=sig_scale, c=s_gpd_c * signal_scaling, loc=s_gpd_loc, size=n_samples)
         elif signal_dist == 'Expon':
+            sig_scale = np.maximum(0, future_signal['Scale_Sig'][future_signal['year'] == year])
             signal_samples = np.random.exponential(scale=sig_scale, size=n_samples)
         elif signal_dist == 'Gamma':
+            sig_scale = np.maximum(0, future_signal['Scale_Sig'][future_signal['year'] == year])
             signal_samples = gamma.rvs(scale=sig_scale, a=s_gamma_alpha, loc=s_gamma_loc, size=n_samples)
         
         univariate_sample = {
@@ -208,7 +215,8 @@ def simulate_storm_statistics(sim, parent, result_df, future_signal, params, KNN
         parent.loc[index, ['Intensity', 'Duration']] = sample[['Intensity', 'Duration']]
 
     return parent
-    
+
+
 
 def KNN_bootstrap_vector(predict, summary, sample_size=100, neighbors="all"):
     # Using NearestNeighbors to find k nearest neighbors efficiently
@@ -225,6 +233,7 @@ def KNN_bootstrap_vector(predict, summary, sample_size=100, neighbors="all"):
     
     return bootstrapped_samples
 
+    
 
 def KNN_bootstrap(predict, summary, sample_size, neighbors=None):
     """
@@ -255,6 +264,7 @@ def KNN_bootstrap(predict, summary, sample_size, neighbors=None):
     bootstrapped_samples = summary.iloc[sampled_indices]
 
     return bootstrapped_samples
+
 
 
 def KNN(predict, summary):
@@ -323,6 +333,7 @@ def KNN(predict, summary):
     return resampled_summary
 
 
+
 def KNN_MLE(predict, summary):
     """
     Performs a K-Nearest Neighbors (KNN) analysis using maximum likelihood estimates
@@ -375,6 +386,7 @@ def KNN_MLE(predict, summary):
     return resampled_summary
 
 
+
 def expand_rows_based_on_frequency(parent, sim):
     """
     Expands each row of the DataFrame based on the 'Frequency' column and assigns unique storm IDs.
@@ -409,6 +421,7 @@ def expand_rows_based_on_frequency(parent, sim):
     final_df = pd.concat([child, zero_freq_rows], ignore_index=True).sort_values(by='year')
 
     return final_df
+
 
 
 def storm_trajectories(parent, bootstrap_curve, cluster_dict_std, plot=False):
@@ -473,52 +486,6 @@ def storm_trajectories(parent, bootstrap_curve, cluster_dict_std, plot=False):
     return combined_series
 
 
-def fit_logspline_density(data, n_samples, model=None, plot=False):
-    """
-    Fits a logspline density estimator to the given univariate data, samples from it,
-    and optionally plots the density estimation.
-
-    Parameters:
-    data (array-like): The univariate data for which to estimate the density function.
-    n_samples (int): Number of samples to draw.
-    plot (bool): If True, plot the density estimation against the histogram of the data.
-
-    Returns:
-    dict: A dictionary containing the model, sample array, density function, and plot (if created).
-    """
-    if model == None:
-        # Fit the logspline model to the data
-        model = KDEMultivariate(data, var_type='c', bw='cv_ml')
-    
-    # Define the density function
-    def density_function(x):
-        return model.pdf(x)
-
-    # Compute the CDF from the PDF
-    x = np.linspace(data.min(), data.max(), 1000)
-    pdf_values = density_function(x)
-    cdf_values = cumtrapz(pdf_values, x, initial=0)
-    cdf_values /= cdf_values[-1]  # Normalize to make it a proper CDF
-
-    # Create an interpolation of the inverse CDF
-    inverse_cdf = interp1d(cdf_values, x, bounds_error=False, fill_value=(x[0], x[-1]))
-
-    # Draw uniform random samples for inverse transform sampling
-    uniform_samples = np.random.rand(n_samples)
-    samples = inverse_cdf(uniform_samples)
-
-    # Optionally plot the density estimation
-    if plot:
-        plt.figure(figsize=(10, 6))
-        plt.plot(x, pdf_values, label='Logspline Density Estimate')
-        plt.hist(data, bins=30, density=True, alpha=0.5, label='Histogram of Data')
-        plt.hist(samples, bins=30, density=True, alpha=0.5, label='Histogram of Samples', color='red')
-        plt.title('Logspline Density Estimation and Samples')
-        plt.legend()
-        plt.show()
-        
-    return model, samples, "Logspline"
-
 
 def fit_and_predict_spline(values, n_gen):
     """
@@ -559,6 +526,7 @@ def fit_and_predict_spline(values, n_gen):
     return new_values, no_error
 
 
+
 def find_closest_number(target, numbers):
     """
     Finds and returns the number closest to a target value from a list of numbers, except 1. 
@@ -582,6 +550,7 @@ def find_closest_number(target, numbers):
         if number != 1:
             return number
             
+
 
 def bootstrap_curve(dict, duration, intensity):
     """
@@ -614,6 +583,377 @@ def bootstrap_curve(dict, duration, intensity):
         series = dict[duration][rand]*intensity
 
     return series, no_error
+
+
+def index_and_count_clusters(df, var_interest, base_signal, name, cluster_len=1):
+    """
+    Indexes and counts clusters of consecutive exceedances within a DataFrame.
+
+    Parameters:
+    - df: DataFrame containing the time series data with timestamps as index.
+    - name: The column name in df indicating exceedance (1 for exceedance, 0 otherwise).
+    - cluster_len: Maximum number of days allowed between exceedances to belong to the same cluster.
+
+    Returns:
+    - A tuple containing the DataFrame with an added 'Cluster_Index' column indicating each 
+      exceedance's cluster membership, and a list of cluster sizes.
+
+    The function iterates over the DataFrame, identifying clusters of exceedances based on the 
+    specified day gap (cluster_len). It assigns a unique index to each cluster and counts the 
+    size (number of exceedances) of each cluster.
+    """
+    
+    cluster_idx = 0  # Initialize cluster indexing at 0
+    prev_timestamp = pd.Timestamp.min  # Use a very early timestamp to ensure any valid timestamp will be after this
+    cluster_sizes = []  # List to keep track of individual cluster sizes for direct mapping later
+    last_exceedance_timestamp = pd.Timestamp.min  # Track the timestamp of the last exceedance
+
+    df['Cluster_Index'] = 0  # Initialize cluster index column
+    current_cluster_size = 0  # Track the size of the current cluster
+
+    # Map annual signals to daily data based on the year
+    df['Year'] = df.index.year
+    ann_dict = df.set_index('Year')['Ann_Signal'].to_dict()
+    df['Ann_Signal'] = df['Year'].map(ann_dict)
+    
+    # Determine if daily values exceed the annual values
+    df['Exceeds_Wave'] = (df[var_interest] > df['Ann_Signal']).astype(int)      
+    df['Exceeds_Std'] = (df[var_interest] > base_signal).astype(int)  # Boolean attribute for standard exceedances above base signal
+        
+    # Calculate the difference only when exceedance occurs; otherwise, set to 0
+    df['Exceedance_Diff_Wave'] = np.where(df['Exceeds_Wave'] == 1, df[var_interest] , df['Ann_Signal'])
+    df['Exceedance_Diff_Std'] = np.where(df['Exceeds_Std'] == 1, df[var_interest], base_signal)
+    
+    # Identify changes in exceedance state
+    df['Exceeds_Change_Wave'] = df['Exceeds_Wave'].diff()
+    df['Exceeds_Change_Std'] = df['Exceeds_Std'].diff()
+    
+    # Identify the start of a cluster
+    df['Start_Cluster_Wave'] = (df['Exceeds_Change_Wave'] == 1)
+    df['Start_Cluster_Std'] = (df['Exceeds_Change_Std'] == 1)
+    
+    # Identify the end of a cluster
+    df['End_Cluster_Wave'] = (df['Exceeds_Change_Wave'] == -1)
+    df['End_Cluster_Std'] = (df['Exceeds_Change_Std'] == -1)
+
+    for idx, row in df.iterrows():
+        current_timestamp = idx  # Assuming idx is a Timestamp since df.iterrows() was used
+
+        # Initialize day_difference with a default value
+        day_difference = float('inf')  # Assume a large day difference by default
+    
+        if last_exceedance_timestamp != pd.Timestamp.min:
+            # Calculate the difference in days between the current day and the last exceedance
+            # Only if the last exceedance timestamp is not the minimum timestamp
+            day_difference = (current_timestamp - last_exceedance_timestamp).days
+            # Cap the day difference at 365 days
+            day_difference = min(day_difference, 365)
+    
+        if row['Exceeds_Std'] == 1:
+            if day_difference > cluster_len:
+                # Start a new cluster if day difference is more than cluster_len
+                # or if this is the first exceedance being considered
+                if current_cluster_size > 0:
+                    # Finalize the current cluster before starting a new one
+                    cluster_sizes.append(current_cluster_size)
+                cluster_idx += 1
+                current_cluster_size = 1  # Start new cluster size counting
+            else:
+                # Current exceedance is within cluster_len days of the last exceedance
+                current_cluster_size += 1
+    
+            # Update the cluster index and the last exceedance timestamp
+            df.at[idx, 'Cluster_Index'] = cluster_idx
+            last_exceedance_timestamp = current_timestamp
+        else:
+            # Non-exceedance days do not immediately finalize a cluster,
+            # but we don't update last_exceedance_timestamp here
+            continue
+
+    # Handle the last cluster's size at the end of the DataFrame
+    if current_cluster_size > 0:
+        cluster_sizes.append(current_cluster_size)
+
+    # Create a summary DataFrame for standard threshold
+    summary_std = df.groupby(df.index.year).agg(
+        Total_Exceedances=('Exceeds_Std', 'sum'),
+        Intensity = ('Ann_Signal','mean'),
+        Frequency=('Cluster_Index', lambda x: len(set(x[x > 0]))),  # Only consider non-zero indices
+    )
+    
+    summary_std['Duration'] = np.where(summary_std['Frequency'] == 0, 0, summary_std['Total_Exceedances'] / summary_std['Frequency'])
+
+    return df, summary_std, cluster_sizes
+
+def uni_adapted_NS_Process(n_simulations, 
+                       years,
+                       forecasted_agg_ibc,
+                       reconstruct_forecast,
+                       summary_std,
+                       cluster_dict_std,
+                       folder,
+                       run_name,
+                       base_signal,
+                       percentile_50,
+                       forecast_model,
+                       intensity_dist,
+                       dur_dist,
+                       KNN_Type='default',
+                       wave_for='all',
+                       freq_size=1,
+                       dur_size=1,
+                       int_size=1,
+                       steps=20,
+                       intensity_params = None,
+                       duration_params = None):
+    
+    if dur_dist == 'Gamma':
+        dur_gamma_alpha = duration_params['gamma_alpha']
+        dur_gamma_loc = duration_params['gamma_loc']
+        dur_gamma_beta = duration_params['scale']
+        med_dur = duration_params['med_dur']
+    if dur_dist == 'GPD':
+        dur_gpd_c = duration_params['gpd_c']
+        dur_gpd_loc = duration_params['gpd_loc']
+        dur_gpd_scale = duration_params['scale']
+        med_dur = duration_params['med_dur']
+    
+    if intensity_dist == 'Gamma':
+        gamma_alpha = intensity_params['gamma_alpha']
+        gamma_loc = intensity_params['gamma_loc']
+        gamma_beta = intensity_params['scale']
+    if intensity_dist == 'GPD':
+        gpd_c = intensity_params['gpd_c']
+        gpd_loc = intensity_params['gpd_loc']
+        gpd_scale = intensity_params['scale']
+    
+    all_data = []
+    for sim in range(n_simulations):
+        # Create parent distribution
+        parent = pd.DataFrame({'sim': sim, 'year': years})
+        
+        # Pull wavelet threshold from wavelet
+        if wave_for != 'mean' and forecast_model != 'LSTM':
+            parent['wave'] = forecasted_agg_ibc[sim]
+        else:
+            parent['wave'] = reconstruct_forecast['Forecast'].values[:steps]
+
+        if KNN_Type == 'MLE':
+            parent = uni_KNN_MLE(parent, summary_std)
+        else:
+            parent = uni_KNN(parent, summary_std)
+        
+        # Sample from the Poisson distribution for how many storms in a year
+        parent['no_storms'] = [np.round(np.mean(np.random.poisson(freq, freq_size))) for freq in parent['Frequency']]
+        
+        # Repeat each row in df according to the number of storms
+        child = parent.loc[parent.index.repeat(parent['no_storms'])].reset_index(drop=True)
+        
+        # Create 'index_storms' to indicate the index of each storm
+        child['index_storms'] = child.groupby(child.columns.drop('index_storms', errors='ignore').tolist()).cumcount() + 1
+        
+        # Create a unique identifier by combining year and storm index
+        child['unique_storm_id'] = child['year'].astype(str) + "_" + child['index_storms'].astype(str)
+    
+        if len(child) > 0:
+            # Calculate storm durations
+            for i in range(len(child)):
+                if dur_dist == 'GPD':
+                    child.at[i,'storm_max_intensity'] = int(np.round(np.mean(genpareto.rvs(c=dur_gpd_c, loc=dur_gpd_loc, scale=child['Duration'][i]/med_dur*dur_gpd_scale, size=dur_size))))
+                if dur_dist == 'Gamma':
+                    shape_value = max(dur_gamma_alpha*child['Duration'][i]/med_dur, 0.1)  # Ensuring a minimum positive value
+
+                    child.at[i, 'duration'] = int(np.round(np.mean(gamma.rvs(a=shape_value, loc=dur_gamma_loc, scale=dur_gamma_beta, size=dur_size))))
+                else:
+                    child.at[i, 'duration'] = int(np.round(np.mean(np.random.exponential(scale=child['Duration'][i], size=dur_size))))
+            
+                if intensity_dist == 'GPD':
+                    # Sample from truncated genpareto distribution (at 50% flow) for moving wavelet threshold for max intensity of year
+                    child.at[i,'storm_max_intensity'] = max(np.mean(genpareto.rvs(c=gpd_c, loc=gpd_loc, scale=child['Intensity'][i]/base_signal*gpd_scale, size=int_size)), percentile_50)
+                if intensity_dist == 'Gamma':
+                    # Sample from truncated gamma distribution (at 50% flow) for moving wavelet threshold for max intensity of year
+                    child.at[i,'storm_max_intensity'] = max(np.mean(gamma.rvs(a=gamma_alpha*child['Intensity'][i]/base_signal, loc=gamma_loc, scale=gamma_beta, size=int_size)), percentile_50)
+                else:
+                    # Sample from truncated exponential distribution (at 50% flow) for moving wavelet threshold for max intensity of year
+                    child.at[i,'storm_max_intensity'] = max(np.mean(np.random.exponential(scale=child['Intensity'][i], size=int_size)), percentile_50)
+                
+            # Repeat each row in df according to the storm duration
+            series = child.loc[child.index.repeat(child['duration'])].reset_index(drop=True)
+            
+            # Create 'index_storms' to indicate the index of each storm
+            series['storm_day'] = series.groupby(series.columns.drop('storm_day', errors='ignore').tolist()).cumcount() + 1
+            
+            # New column for intensities
+            series['intensity'] = None  # Initialize the column
+            
+            # Iterate through each unique storm
+            for index_storm in series['unique_storm_id'].unique():
+                # Filter the DataFrame for the current storm
+                storm_data = series[series['unique_storm_id'] == index_storm]
+                # Get the duration, and peak intensity for the current storm
+                duration = storm_data['duration'].iloc[0]
+                peak_intensity = storm_data['storm_max_intensity'].iloc[0]
+                # Generate the intensities
+                intensities, no_error = bootstrap_curve(cluster_dict_std, duration, peak_intensity)
+                
+                # If spline fit fails, raise error and use nearest neighbor duration
+                if no_error == 1:                    
+                    # Identify the target rows in 'series'
+                    target_rows = series['unique_storm_id'] == index_storm
+                    # Length of the segment in 'series' that matches 'index_storm'
+                    length_series_segment = series.loc[target_rows, 'intensity'].shape[0]
+                    # Find length of 'intensities'
+                    required_length = len(intensities)
+                    
+                    # Calculate the number of rows to drop
+                    num_rows_to_drop = length_series_segment - required_length
+                    
+                    # Find the indices of the rows to keep
+                    indices_to_keep = series.loc[target_rows].index[:-num_rows_to_drop]
+                    
+                    # Update 'series' to only include the rows we want to keep
+                    series = series.loc[indices_to_keep.union(series.loc[~target_rows].index)]
+                
+                # Assign the generated intensities to the 'intensity' column for the current storm
+                series.loc[series['unique_storm_id'] == index_storm, 'intensity'] = intensities      
+        
+            # Append the series dataframe to the list
+            all_data.append(series)
+
+    # Concatenate all DataFrames in the list at once
+    all_sims = pd.concat(all_data, ignore_index=True)
+
+    # Convert year and sim columns to integers
+    all_sims = all_sims.astype({'sim': 'int', 'year': 'int'})
+    all_sims = all_sims[['sim', 'year', 'index_storms', 'unique_storm_id', 'wave', 'Frequency', 'Intensity', 'Duration', 'no_storms', 'storm_max_intensity', 'duration', 'storm_day', 'intensity']]  # Reorder columns
+    rename_dict = {
+    'wave': 'forecasted_signal',
+    'Frequency': 'lambda_F',
+    'Intensity': 'gamma_I',
+    'Duration': 'alpha_D',
+    'duration': 'storm_duration'
+    }
+    all_sims = all_sims.rename(columns=rename_dict)
+
+    # Save to CSV
+    all_sims.to_csv(f"{folder}/All_Sims_{run_name}.csv", index=False)
+
+    return all_sims, series
+
+
+def uni_KNN(predict, summary):
+    """
+    Performs a K-Nearest Neighbors (KNN) resampling based on the signal intensity.
+    
+    Args:
+        predict (pd.DataFrame): A DataFrame containing the 'wave' feature for which we want to find nearest neighbors.
+        summary (pd.DataFrame): A DataFrame containing historical data with 'Intensity', 'Duration', and 'Frequency' features.
+
+    Returns:
+        pd.DataFrame: A DataFrame of resampled rows from the summary DataFrame with added 'year' and 'sim' columns from the predict DataFrame.
+    """
+    
+    # Determine the number of predictions to process
+    N = predict.shape[0]
+    
+    # Calculate the number of neighbors, k, as the square root of N
+    k = int(np.sqrt(N))
+    
+    # Initialize a list to collect resampled DataFrame rows
+    resampled_rows = []
+
+    # Iterate over each prediction
+    for i in range(N):
+        # Extract the 'wave' value for the current prediction
+        intensity_value = predict.iloc[i]["wave"]
+        
+        # Find the indices of the k nearest neighbors in 'summary' based on the absolute difference in 'Intensity'
+        kNN_ind = np.argsort(np.abs(intensity_value - summary["Intensity"]))[:k]
+
+        # Calculate weights for each of the k neighbors inversely proportional to their rank (1 being closest)
+        W = [(1/x) / np.sum(1 / np.arange(1, k+1)) for x in np.arange(1, k+1)]
+        
+        # Ensure the weights sum to 1.0
+        assert np.isclose(np.sum(W), 1.0), 'weights should sum to 1'
+
+        # Calculate the cumulative sum of weights to facilitate weighted random sampling
+        cumW = np.cumsum(W)
+        
+        # Generate a random number and use it to select a neighbor based on the weighted distribution
+        rnd = np.random.rand()
+        sampled_index = next(x for x, val in enumerate(cumW) if val > rnd)
+        
+        # Get the index of the selected sample
+        samp_ind = kNN_ind.iloc[sampled_index]
+
+        # Extract the 'year' and 'sim' values from the current prediction
+        year = predict.iloc[i]["year"]
+        sim = predict.iloc[i]["sim"]
+
+        # Create a new row from the selected sample with additional 'year', 'sim', and original 'wave' values
+        resampled_row = summary.iloc[[samp_ind]][["Intensity", "Duration", "Frequency"]].copy()
+        resampled_row["year"] = year
+        resampled_row["sim"] = sim
+        resampled_row["wave"] = intensity_value
+        
+        # Append the new row to the list of resampled rows
+        resampled_rows.append(resampled_row)
+
+    # Concatenate all resampled rows into a single DataFrame
+    resampled_summary = pd.concat(resampled_rows, ignore_index=True)
+    
+    # Return the resampled DataFrame
+    return resampled_summary
+
+
+def uni_KNN_MLE(predict, summary):
+    """
+    Performs a K-Nearest Neighbors (KNN) analysis using maximum likelihood estimates
+    based on the signal intensity, duration, and frequency.
+
+    Args:
+        predict (pd.DataFrame): A DataFrame containing the 'wave' feature for which we want to find nearest neighbors.
+        summary (pd.DataFrame): A DataFrame containing historical data with 'Intensity', 'Duration', and 'Frequency' features.
+
+    Returns:
+        pd.DataFrame: A DataFrame with estimated values for 'Intensity', 'Duration', and 'Frequency' for each prediction,
+                      along with the 'year' and 'sim' columns from the predict DataFrame.
+    """
+    
+    N = predict.shape[0]
+    k = int(np.sqrt(N))
+    resampled_rows = []
+
+    for i in range(N):
+        intensity_value = predict.iloc[i]["wave"]
+        kNN_ind = np.argsort(np.abs(intensity_value - summary["Intensity"]))[:k]
+        W = [(1/x) / np.sum(1 / np.arange(1, k+1)) for x in np.arange(1, k+1)]
+        
+        assert np.isclose(np.sum(W), 1.0), 'weights should sum to 1'
+
+        # Calculate weighted averages for 'Intensity', 'Duration', 'Frequency' instead of sampling
+        intensity_estimate = np.dot(W, summary.iloc[kNN_ind]["Intensity"])
+        duration_estimate = np.dot(W, summary.iloc[kNN_ind]["Duration"])
+        frequency_estimate = np.dot(W, summary.iloc[kNN_ind]["Frequency"])
+        
+        year = predict.iloc[i]["year"]
+        sim = predict.iloc[i]["sim"]
+
+        # Create a new row with the estimated values and original 'year', 'sim', and 'wave' values
+        estimated_row = pd.DataFrame({
+            "Intensity": [intensity_estimate],
+            "Duration": [duration_estimate],
+            "Frequency": [frequency_estimate],
+            "year": [year],
+            "sim": [sim],
+            "wave": [intensity_value]
+        })
+        
+        resampled_rows.append(estimated_row)
+
+    resampled_summary = pd.concat(resampled_rows, ignore_index=True)
+    
+    return resampled_summary
 
 
 def extract_exceedance_clusters(df, signal, var_interest, base_signal):
@@ -692,6 +1032,7 @@ def extract_exceedance_clusters(df, signal, var_interest, base_signal):
     return result_df, yearly_df
 
 
+
 def identify_clusters(df, type):
     """
     Identifies clusters in the DataFrame based on 'Start_Cluster', 'End_Cluster', and 'Exceeds_Wave' flags.
@@ -728,6 +1069,7 @@ def identify_clusters(df, type):
         clusters.append(current_cluster)
     
     return clusters
+
 
 
 def trajectory_dict_plot(df, plot_traj):
@@ -819,6 +1161,55 @@ def fit_empirical_copula(result_df, sample_data):
     return w_df
 
 
+
+def fit_logspline_density(data, n_samples, model=None, plot=False):
+    """
+    Fits a logspline density estimator to the given univariate data, samples from it,
+    and optionally plots the density estimation.
+
+    Parameters:
+    data (array-like): The univariate data for which to estimate the density function.
+    n_samples (int): Number of samples to draw.
+    plot (bool): If True, plot the density estimation against the histogram of the data.
+
+    Returns:
+    dict: A dictionary containing the model, sample array, density function, and plot (if created).
+    """
+    if model == None:
+        # Fit the logspline model to the data
+        model = KDEMultivariate(data, var_type='c', bw='cv_ml')
+    
+    # Define the density function
+    def density_function(x):
+        return model.pdf(x)
+
+    # Compute the CDF from the PDF
+    x = np.linspace(data.min(), data.max(), 1000)
+    pdf_values = density_function(x)
+    cdf_values = cumtrapz(pdf_values, x, initial=0)
+    cdf_values /= cdf_values[-1]  # Normalize to make it a proper CDF
+
+    # Create an interpolation of the inverse CDF
+    inverse_cdf = interp1d(cdf_values, x, bounds_error=False, fill_value=(x[0], x[-1]))
+
+    # Draw uniform random samples for inverse transform sampling
+    uniform_samples = np.random.rand(n_samples)
+    samples = inverse_cdf(uniform_samples)
+
+    # Optionally plot the density estimation
+    if plot:
+        plt.figure(figsize=(10, 6))
+        plt.plot(x, pdf_values, label='Logspline Density Estimate')
+        plt.hist(data, bins=30, density=True, alpha=0.5, label='Histogram of Data')
+        plt.hist(samples, bins=30, density=True, alpha=0.5, label='Histogram of Samples', color='red')
+        plt.title('Logspline Density Estimation and Samples')
+        plt.legend()
+        plt.show()
+        
+    return model, samples, "Logspline"
+
+
+
 def fit_intensity_distribution(list_of_peaks, intensity_dist, plot_RV, name, n_sample, status=0):
     """
     Fits specified distribution to peaks of the exceedance difference wave signal
@@ -839,15 +1230,15 @@ def fit_intensity_distribution(list_of_peaks, intensity_dist, plot_RV, name, n_s
         c, loc, scale = genpareto.fit(list_of_peaks)
         intensity_params = {'gpd_c': c, 'gpd_loc': loc, 'scale': scale}
         distribution_func = genpareto
-    elif intensity_dist == 'Expon':
-        loc, scale = expon.fit(list_of_peaks, floc=0)
-        intensity_params = {'expon_loc': loc, 'scale': scale}
-        distribution_func = expon
-    else:  # Default to Gamma
+    elif intensity_dist == 'Gamma':
         alpha, loc, beta = gamma.fit(list_of_peaks)
         intensity_params = {'gamma_alpha': alpha, 'gamma_loc': loc, 'scale': beta}
         distribution_func = gamma
-        intensity_dist = "Gamma"
+    else:  # Default to Exponential
+        loc, scale = expon.fit(list_of_peaks, floc=0)
+        intensity_params = {'expon_loc': loc, 'scale': scale}
+        distribution_func = expon
+        intensity_dist = "Expon"
 
     # Generate samples from the fitted distribution
     samples = distribution_func.rvs(*intensity_params.values(), size=n_sample)
@@ -862,11 +1253,12 @@ def fit_intensity_distribution(list_of_peaks, intensity_dist, plot_RV, name, n_s
     if ks_p_value < 0.05 and status != -1:
         print(f"Bad fit indicated by ks test for {intensity_dist}.")
         if status == 0:
-            intensity_params, samples, intensity_dist = fit_intensity_distribution(list_of_peaks, "Expon", plot_RV, name, n_sample, status=1)
+            intensity_params, samples, intensity_dist, (ks_stat, ks_p_value) = fit_intensity_distribution(list_of_peaks, "Gamma", plot_RV, name, n_sample, status=1)
         elif status == 1:
-            intensity_params, samples, intensity_dist = fit_intensity_distribution(list_of_peaks, "GPD", plot_RV, name, n_sample, status=2)
+            intensity_params, samples, intensity_dist, (ks_stat, ks_p_value) = fit_intensity_distribution(list_of_peaks, "GPD", plot_RV, name, n_sample, status=2)
         else:
             intensity_params, samples, intensity_dist = fit_logspline_density(list_of_peaks, n_sample, plot=plot_RV)
+            (ks_stat, ks_p_value) = "N/A - Logspline default", "N/A - Logspline default"
             print(f"Defaulted to Logspline PDF.")
     else:
         if status == -1:
@@ -875,6 +1267,7 @@ def fit_intensity_distribution(list_of_peaks, intensity_dist, plot_RV, name, n_s
             print(f"Good fit indicated by ks test for {intensity_dist}.")
 
     return intensity_params, samples, intensity_dist, (ks_stat, ks_p_value)
+
 
 
 def fit_duration_distribution(std_clusters, duration_dist, plot_RV, name, n_sample, status=0):
@@ -928,11 +1321,12 @@ def fit_duration_distribution(std_clusters, duration_dist, plot_RV, name, n_samp
     if chi_p_value < 0.05 and status != -1:
         print(f"Bad fit indicated by chi_squared test for {duration_dist}.")
         if status == 0:
-            dur_params, samples, duration_dist = fit_duration_distribution(std_clusters, "GPD", plot_RV, name, n_sample, status=1)
+            dur_params, samples, duration_dist, (chi_stat, chi_p_value) = fit_duration_distribution(std_clusters, "Gamma", plot_RV, name, n_sample, status=1)
         elif status == 1:
-            dur_params, samples, duration_dist = fit_duration_distribution(std_clusters, "Gamma", plot_RV, name, n_sample, status=2)
+            dur_params, samples, duration_dist, (chi_stat, chi_p_value) = fit_duration_distribution(std_clusters, "GPD", plot_RV, name, n_sample, status=2)
         else:
             dur_params, samples, duration_dist  = fit_logspline_density(std_clusters, n_sample, plot=plot_RV)
+            (chi_stat, chi_p_value) = "N/A - Logspline default", "N/A - Logspline default"
             print(f"Defaulted to Logspline PDF.")
         
     else:
@@ -942,6 +1336,7 @@ def fit_duration_distribution(std_clusters, duration_dist, plot_RV, name, n_samp
             print(f"Good fit indicated by chi_squared test for {duration_dist}.")
     
     return dur_params, samples, duration_dist, (chi_stat, chi_p_value)
+
 
 
 def fit_frequency_distribution(list_of_frequencies, frequency_dist, plot_RV, name, n_sample, status=0):
@@ -989,6 +1384,7 @@ def fit_frequency_distribution(list_of_frequencies, frequency_dist, plot_RV, nam
         print(f"Bad fit indicated by chi_squared test for {frequency_dist}.")
         list_of_frequencies = list_of_frequencies + np.random.uniform(-1, 1, size=len(list_of_frequencies))
         frequency_params, samples, frequency_dist  = fit_logspline_density(list_of_frequencies, n_sample, plot=plot_RV)
+        (chi_stat, chi_p_value) = "N/A - Logspline default", "N/A - Logspline default"
         print(f"Defaulted to Logspline PDF.")
     else:
         frequency_dist = 'Poisson'
@@ -1000,6 +1396,7 @@ def fit_frequency_distribution(list_of_frequencies, frequency_dist, plot_RV, nam
     return frequency_params, samples, frequency_dist, (chi_stat, chi_p_value)
 
 
+    
 def plot_pois_distribution_fit(list_of_frequencies, samples, distribution, params, name):
     plt.figure(figsize=(10, 6))
     plt.hist(list_of_frequencies, bins='auto', alpha=0.5, label='Observed Data', density=True)
@@ -1007,7 +1404,8 @@ def plot_pois_distribution_fit(list_of_frequencies, samples, distribution, param
     plt.title(f'Fit of {name}')
     plt.legend()
     plt.show()
-    
+
+
 
 def plot_exceedances_over_time(df, data_unit):
     """
@@ -1079,6 +1477,7 @@ def plot_distribution_fit(data, samples, dist_func, params, name):
     plt.show()
 
 
+
 def plot_logspline_pdf(data, intensity_density_function):
     points = np.linspace(min(data), max(data), 100)
     estimated_densities = intensity_density_function(points)
@@ -1089,6 +1488,7 @@ def plot_logspline_pdf(data, intensity_density_function):
     plt.title('Density Estimation using Logspline')
     plt.legend()
     plt.show()
+
 
 
 def FIDS_pairplot(df, jitter_col=None, jitter_amount=(-0.5, 0.5), columns=None, plot_kws=None, height=3):
