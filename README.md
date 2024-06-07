@@ -1,7 +1,9 @@
 # Compound Floods
 This public repository contains all code for the project entitled: "A Nonstationary Stochastic Simulator for Clustered Regional Hydroclimatic Extremes to Characterize Compound Flood Risk."
 
-Below I outline the files included in the repository and their contents. Note that this repository and associated code is currently under maintenance and being refined for easy user access and implementation.
+Below I outline the files included in the repository and their contents. 
+
+NOTE: This repository and associated code is currently under maintenance and in process of being refined to enhance user access and implementation. Please contact directly about current code files. Once research is formally published, all code should be up to date and this message will be removed.
 
 # Repository Contents
 
