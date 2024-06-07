@@ -3,7 +3,7 @@ This public repository contains all code for the project entitled: "A Nonstation
 
 Below I outline the files included in the repository and their contents. 
 
-NOTE: This repository and associated code is currently under maintenance and in process of being refined to enhance user access and implementation. Please contact directly about current code files. Once research is formally published, all code should be up to date and this message will be removed.
+NOTE: This repository and associated code (including the README) is currently under maintenance and in process of being refined to enhance user access and implementation. Please contact directly about current code files. Once research is formally published, all code should be up to date and this message will be removed.
 
 # Repository Contents
 
